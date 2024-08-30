@@ -4,16 +4,9 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Video;
 
-/*
- *  YOLO inference script
- *  =====================
- * Place this script on the Main Camera.
- * Place the yolov7-tiny.sentis file and a *.mp4 video file in the Assets/StreamingAssets folder
- */
-
 public class RunYOLO : MonoBehaviour
 {
-	const string modelName = "yolov7-tiny.sentis";
+	const string modelName = "yolov7-tiny";
 
 	// Link the classes.txt here:
 	public TextAsset labelsAsset;
