@@ -44,6 +44,7 @@ public class ScreenCaptureTextureManager : MonoBehaviour
 
 	private void Start()
 	{
+		if (Application.platform != RuntimePlatform.Android) return;
 		UnityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
 		UnityPlayerActivityWithMediaProjector = UnityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
 
