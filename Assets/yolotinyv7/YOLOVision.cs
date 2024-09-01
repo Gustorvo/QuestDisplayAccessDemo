@@ -28,7 +28,7 @@ public class YOLOVision : MonoBehaviour
 
     private Transform displayLocation;
     private Model model;
-    private IWorker engine;
+    //private Worker engine;
     private string[] labels;
     private RenderTexture targetRT;
     const BackendType backend = BackendType.GPUCompute;
@@ -65,7 +65,7 @@ public class YOLOVision : MonoBehaviour
         displayLocation = displayImage.transform;
 
         //Create engine to run model
-        engine = WorkerFactory.CreateWorker(backend, model);
+        //engine = new Worker(model, backend);
     }
 
     private void Update()
@@ -86,11 +86,13 @@ public class YOLOVision : MonoBehaviour
         else return;
 
         using var input = TextureConverter.ToTensor(targetRT, imageWidth, imageHeight, 3);
-        engine.Execute(input);
+       
+        // from documentation: Remove uses of worker.Execute or worker.SetInputs with a dictionary, instead use an array or set the inputs one at a time by name.
+        //engine.Schedule(input);
 
         //Read output tensors
-        var output = engine.PeekOutput() as TensorFloat;
-        output.MakeReadable();
+        //var output = engine.PeekOutput() as Tensor<float>;
+        //output.MakeReadable();
 
         float displayWidth = displayImage.rectTransform.rect.width;
         float displayHeight = displayImage.rectTransform.rect.height;
@@ -99,19 +101,19 @@ public class YOLOVision : MonoBehaviour
         float scaleY = displayHeight / imageHeight;
 
         //Draw the bounding boxes
-        for (int n = 0; n < output.shape[0]; n++)
-        {
-            var box = new BoundingBox
-            {
-                centerX = ((output[n, 1] + output[n, 3]) * scaleX - displayWidth) / 2,
-                centerY = ((output[n, 2] + output[n, 4]) * scaleY - displayHeight) / 2,
-                width = (output[n, 3] - output[n, 1]) * scaleX,
-                height = (output[n, 4] - output[n, 2]) * scaleY,
-                label = labels[(int)output[n, 5]],
-                confidence = Mathf.FloorToInt(output[n, 6] * 100 + 0.5f)
-            };
-            DrawBox(box, n);
-        }
+        // for (int n = 0; n < output.shape[0]; n++)
+        // {
+        //     var box = new BoundingBox
+        //     {
+        //         centerX = ((output[n, 1] + output[n, 3]) * scaleX - displayWidth) / 2,
+        //         centerY = ((output[n, 2] + output[n, 4]) * scaleY - displayHeight) / 2,
+        //         width = (output[n, 3] - output[n, 1]) * scaleX,
+        //         height = (output[n, 4] - output[n, 2]) * scaleY,
+        //         label = labels[(int)output[n, 5]],
+        //         confidence = Mathf.FloorToInt(output[n, 6] * 100 + 0.5f)
+        //     };
+        //     DrawBox(box, n);
+        // }
     }
 
     public void DrawBox(BoundingBox box, int id)
@@ -185,6 +187,6 @@ public class YOLOVision : MonoBehaviour
 
     private void OnDestroy()
     {
-        engine?.Dispose();
+        //engine?.Dispose();
     }
 }
