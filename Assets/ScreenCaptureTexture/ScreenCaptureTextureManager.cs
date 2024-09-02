@@ -16,14 +16,14 @@ public class ScreenCaptureTextureManager : MonoBehaviour
 	private AndroidJavaObject byteBuffer;
 	private unsafe sbyte* imageData;
 	private int bufferSize;
-	public static ScreenCaptureTextureManager Instance { get; private set; }
 
 	private AndroidJavaClass UnityPlayer;
 	private AndroidJavaObject UnityPlayerActivityWithMediaProjector;
 
 	private Texture2D screenTexture;
 	private RenderTexture flipTexture;
-	public static Texture2D ScreenCaptureTexture => Instance.screenTexture;
+	private RenderTexture flipTextureMirrored;
+	public Texture2D ScreenTexture => screenTexture;
 
 	public bool startScreenCaptureOnStart = true;
 	public FlipMethod flipMethod = FlipMethod.GPUOnly;
@@ -36,11 +36,7 @@ public class ScreenCaptureTextureManager : MonoBehaviour
 	public UnityEvent OnNewFrame = new();
 
 	public static readonly Vector2Int Size = new(1024, 1024);
-
-	private void Awake()
-	{
-		Instance = this;
-	}
+	public bool ScreenCaptureIsActive { get; private set; }
 
 	private void Start()
 	{
@@ -53,10 +49,11 @@ public class ScreenCaptureTextureManager : MonoBehaviour
 
 		OnTextureInitialized.Invoke(screenTexture);
 
-		if(startScreenCaptureOnStart)
+		if (startScreenCaptureOnStart)
 		{
 			StartScreenCapture();
 		}
+
 		bufferSize = Size.x * Size.y * 4; // RGBA_8888 format: 4 bytes per pixel
 	}
 
@@ -68,11 +65,11 @@ public class ScreenCaptureTextureManager : MonoBehaviour
 		// Get the memory address of the direct ByteBuffer
 		imageData = AndroidJNI.GetDirectBufferAddress(byteBuffer.GetRawObject());
 	}
+
 	private byte[] GetLastFrameBytes()
 	{
 		return UnityPlayerActivityWithMediaProjector.Get<byte[]>("lastFrameBytes");
 	}
-
 
 
 	public void StartScreenCapture()
@@ -91,6 +88,7 @@ public class ScreenCaptureTextureManager : MonoBehaviour
 	{
 		OnScreenCaptureStarted.Invoke();
 		InitializeByteBufferRetrieved();
+		ScreenCaptureIsActive = true;
 	}
 
 	private void ScreenCapturePermissionDeclined()
@@ -109,7 +107,7 @@ public class ScreenCaptureTextureManager : MonoBehaviour
 		screenTexture.LoadRawTextureData((IntPtr)imageData, bufferSize);
 		screenTexture.Apply();
 
-		switch(flipMethod)
+		switch (flipMethod)
 		{
 			case FlipMethod.DontFlip:
 				break;
@@ -120,7 +118,7 @@ public class ScreenCaptureTextureManager : MonoBehaviour
 				break;
 
 			case FlipMethod.CPUOnly:
-				FlipImageCPU(screenTexture);
+				TextureHelper.FlipImageVerticallyCPU(screenTexture);
 				break;
 
 			case FlipMethod.Both:
@@ -128,12 +126,12 @@ public class ScreenCaptureTextureManager : MonoBehaviour
 				Graphics.Blit(screenTexture, flipTexture, new Vector2(1, -1), Vector2.zero);
 				Graphics.CopyTexture(flipTexture, screenTexture);
 
-				FlipImageCPU(screenTexture);
+				TextureHelper.FlipImageVerticallyCPU(screenTexture);
 				break;
 		}
 
 		RenderTexture previousylActive = RenderTexture.active;
-		
+
 
 		OnNewFrame.Invoke();
 	}
@@ -141,30 +139,6 @@ public class ScreenCaptureTextureManager : MonoBehaviour
 	private void ScreenCaptureStopped()
 	{
 		OnScreenCaptureStopped.Invoke();
-	}
-
-	//https://gamedev.stackexchange.com/questions/203539/rotating-a-unity-texture2d-90-180-degrees-without-using-getpixels32-or-setpixels
-	private static void FlipImageCPU(Texture2D tex)
-	{
-		int width = tex.width;
-		int height = tex.height;
-
-		var texels = tex.GetRawTextureData<Color32>();
-		var copy = System.Buffers.ArrayPool<Color32>.Shared.Rent(texels.Length);
-		Unity.Collections.NativeArray<Color32>.Copy(texels, copy, texels.Length);
-
-		int address = 0;
-		for (int newY = 0; newY < height; newY++)
-		{
-			for (int newX = 0; newX < width; newX++)
-			{
-				int oldX = newX;
-				int oldY = height - newY - 1;
-
-				texels[address++] = copy[oldY * width + oldX];
-			}
-		}
-
-		System.Buffers.ArrayPool<Color32>.Shared.Return(copy);
+		ScreenCaptureIsActive = false;
 	}
 }
