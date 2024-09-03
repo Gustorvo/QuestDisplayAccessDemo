@@ -78,6 +78,7 @@ public class ImageSaver : MonoBehaviour
 
 	private async Awaitable StartEncodingAndSavingAsync()
 	{
+		count = 0;
 		while (isActiveAndEnabled)
 		{
 			if (count >= imageLimit) cts.Cancel();
